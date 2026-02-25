@@ -23,7 +23,7 @@ services:
     depends_on:
       - zookeeper # Ensure Zookeeper starts before Kafka
     ports:
-      - "9092:9092" # External traffic (host machine)
+      - "19092:19092" # External traffic (host machine)
       - "29092:29092" # Internal traffic (other containers)
       - "9999:9999" # JMX monitoring port
     environment:
@@ -32,9 +32,9 @@ services:
       # Map internal and external traffic to different listeners
       KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT
       # How clients find the broker (internal network vs localhost)
-      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:29092,PLAINTEXT_HOST://localhost:9092
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:29092,PLAINTEXT_HOST://localhost:19092
       # Actual interfaces Kafka binds to
-      KAFKA_LISTENERS: PLAINTEXT://0.0.0.0:29092,PLAINTEXT_HOST://0.0.0.0:9092
+      KAFKA_LISTENERS: PLAINTEXT://0.0.0.0:29092,PLAINTEXT_HOST://0.0.0.0:19092
       KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT # Use internal listener for broker communication
       KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1 # Set to 1 for single-node local dev
       KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1 # Minimum 'In-Sync Replicas' for transactions
@@ -50,7 +50,7 @@ services:
     volumes:
       - kafka-data:/var/lib/kafka/data # Persist Kafka topic data/logs
     healthcheck: # Ensure Kafka is actually ready to receive messages
-      test: ["CMD", "kafka-broker-api-versions", "--bootstrap-server", "localhost:9092"]
+      test: ["CMD", "kafka-broker-api-versions", "--bootstrap-server", "localhost:19092"]
       interval: 10s
       timeout: 10s
       retries: 5
@@ -104,6 +104,7 @@ services:
       - "8083:8083" # REST API for managing connectors
     environment:
       CONNECT_BOOTSTRAP_SERVERS: kafka:29092
+      CONNECT_REST_ADVERTISED_HOST_NAME: kafka-connect # For external access
       CONNECT_REST_PORT: 8083
       CONNECT_GROUP_ID: compose-connect-group # Unique ID for the Connect cluster
       # Topics where Connect stores its internal configuration and status
