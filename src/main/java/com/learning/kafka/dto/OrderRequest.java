@@ -13,10 +13,10 @@ import java.math.BigDecimal;
 
 /**
  * Order Request DTO - Used for creating orders via REST API
- * 
+ * <p>
  * This is the request body that clients send to create an order.
  * It gets validated and then converted to an Order model for Kafka publishing.
- * 
+ *
  * @author Kafka Mastery Project
  */
 @Data
@@ -24,67 +24,16 @@ import java.math.BigDecimal;
 @NoArgsConstructor
 @AllArgsConstructor
 public class OrderRequest {
-    
-    /**
-     * Customer ID
-     * CHALLENGE 1.17: Add validation annotations
-     * TODO: Add @NotBlank to ensure customerId is not null or empty
-     * 
-     * 💡 Hint: @NotBlank(message = "Customer ID is required")
-     * 
-     * 📝 SOLUTION:
-     * @NotBlank(message = "Customer ID is required")
-     * private String customerId;
-     */
+    @NotBlank(message = "Customer ID is required")
     private String customerId;
-    
-    /**
-     * Customer email
-     * CHALLENGE 1.18: Add validation annotations
-     * TODO: Add @NotBlank and @Email validation
-     * 
-     * 💡 Hint: @Email(message = "Invalid email format")
-     * 
-     * 📝 SOLUTION:
-     * @NotBlank(message = "Customer email is required")
-     * @Email(message = "Invalid email format")
-     * private String customerEmail;
-     */
+    @NotBlank(message = "Customer email is required")
+    @Email(message = "Invalid email format")
     private String customerEmail;
-    
-    /**
-     * Total order amount
-     * CHALLENGE 1.19: Add validation annotations
-     * TODO: Add @NotNull and @Positive validation
-     * 
-     * 💡 Hint: @Positive(message = "Amount must be positive")
-     * 
-     * 📝 SOLUTION:
-     * @NotNull(message = "Total amount is required")
-     * @Positive(message = "Total amount must be positive")
-     * private BigDecimal totalAmount;
-     */
+    @NotNull(message = "Total amount is required")
+    @Positive(message = "Total amount must be positive")
     private BigDecimal totalAmount;
-    
-    /**
-     * Order items (comma-separated for simplicity)
-     * CHALLENGE 1.20: Add validation annotations
-     * TODO: Add @NotBlank validation
-     * 
-     * 📝 SOLUTION:
-     * @NotBlank(message = "Items are required")
-     * private String items;
-     */
+    @NotBlank(message = "Items are required")
     private String items;
-    
-    /**
-     * Shipping address
-     * CHALLENGE 1.21: Add validation annotations
-     * TODO: Add @NotBlank validation
-     * 
-     * 📝 SOLUTION:
-     * @NotBlank(message = "Shipping address is required")
-     * private String shippingAddress;
-     */
+    @NotBlank(message = "Shipping address is required")
     private String shippingAddress;
 }
