@@ -10,13 +10,6 @@ import java.math.BigDecimal;
 import java.time.Instant;
 import java.util.UUID;
 
-/**
- * Order Model - Represents an e-commerce order event
- * This model is used across different Kafka topics:
- * - order-created: When a new order is placed
- * - order-confirmed: When order is confirmed after payment
- * - order-cancelled: When order is cancelled
- */
 @Data
 @Builder
 @NoArgsConstructor
@@ -46,10 +39,6 @@ public class Order {
         FAILED
     }
 
-    /*
-     * TODO: Generate UUID for orderId and correlationId if not provided
-     * TODO: Set createdAt to current instant
-     * TODO: Set initial status to PENDING*/
     public static Order createNew(String customerId, String customerEmail,
                                   BigDecimal totalAmount, String items,
                                   String shippingAddress) {
@@ -70,9 +59,6 @@ public class Order {
                 .build();
     }
 
-    /*     * TODO: Return a new Order with status CONFIRMED
-     * TODO: Update the updatedAt timestamp
-     * TODO: Keep the same correlationId for tracing*/
     public Order confirm() {
         return Order.builder()
                 .orderId(this.orderId)
@@ -89,8 +75,6 @@ public class Order {
                 .build();
     }
 
-    /*     * TODO: Return a new Order with status CANCELLED
-     * TODO: Update the updatedAt timestamp*/
     public Order cancel() {
         return Order.builder()
                 .orderId(this.orderId)

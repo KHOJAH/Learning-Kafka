@@ -10,13 +10,6 @@ import java.math.BigDecimal;
 import java.time.Instant;
 import java.util.UUID;
 
-/**
- * Payment Model - Represents a payment event in the order processing flow
- * <p>
- * Used in topics:
- * - payment-processed: When payment is successfully processed
- * - payment-failed: When payment fails
- */
 @Data
 @Builder
 @NoArgsConstructor
@@ -49,11 +42,6 @@ public class Payment {
         REFUNDED
     }
 
-    /*
-     * TODO: Generate paymentId and transactionId
-     * TODO: Set initial status to PENDING
-     * TODO: Set processedAt to current instant
-     * */
     public static Payment create(String orderId, String correlationId,
                                  BigDecimal amount, PaymentMethod method) {
 
@@ -69,10 +57,6 @@ public class Payment {
                 .build();
     }
 
-    /**
-     * TODO: Return new Payment with status COMPLETED
-     * TODO: Update processedAt timestamp
-     */
     public Payment complete() {
         return Payment.builder()
                 .paymentId(this.paymentId)
@@ -86,11 +70,6 @@ public class Payment {
                 .build();
     }
 
-    /**
-     * TODO: Return new Payment with status FAILED
-     * TODO: Set the failure reason
-     * TODO: Update processedAt timestamp
-     */
     public Payment fail(String reason) {
         return Payment.builder()
                 .paymentId(this.paymentId)
