@@ -2,7 +2,6 @@ package com.learning.kafka.consumer;
 
 import com.learning.kafka.model.Inventory;
 import com.learning.kafka.model.Order;
-import com.learning.kafka.producer.InventoryProducer;
 import com.learning.kafka.service.InventoryService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -19,9 +18,7 @@ import java.util.concurrent.ConcurrentHashMap;
 public class InventoryConsumer {
 
     private final InventoryService inventoryService;
-    private final InventoryProducer inventoryProducer;
     private final Set<String> processedKeys = ConcurrentHashMap.newKeySet();
-
 
     @KafkaListener(topics = "inventory-reservation", groupId = "inventory-reservation-group",
             containerFactory = "kafkaListenerContainerFactory")
@@ -30,22 +27,24 @@ public class InventoryConsumer {
 
         if (processedKeys.contains(order.getIdempotencyKey())) {
             log.warn("Duplicate message detected - skipping: {}", order.getIdempotencyKey());
-            ack.acknowledge(); // Acknowledge but don't process
+            ack.acknowledge();
             return;
         }
 
         try {
-            Inventory result = inventoryService.reserveInventory(order);
+            Inventory inventory = Inventory.create(
+                    order.getOrderId(),
+                    order.getCorrelationId(),
+                    order.getItems(),
+                    1,
+                    "WAREHOUSE-001"
+            );
 
-            if (result.getStatus() == Inventory.ReservationStatus.RESERVED) {
-                inventoryProducer.sendInventoryReserved(result);
-            } else {
-                inventoryProducer.sendInventoryReleased(result);
-            }
+            inventoryService.reserveInventoryAndPublish(inventory);
 
             processedKeys.add(order.getIdempotencyKey());
             ack.acknowledge();
-            log.info("Inventory reservation processed: {}", result.getReservationId());
+            log.info("Inventory reservation processed: {}", order.getOrderId());
         } catch (Exception e) {
             log.error("Inventory reservation failed: {}", e.getMessage(), e);
             throw e;
@@ -59,17 +58,16 @@ public class InventoryConsumer {
 
         if (processedKeys.contains(order.getIdempotencyKey())) {
             log.warn("Duplicate message detected - skipping: {}", order.getIdempotencyKey());
-            ack.acknowledge(); // Acknowledge but don't process
+            ack.acknowledge();
             return;
         }
 
         try {
             Inventory result = inventoryService.releaseInventory(order);
 
-            if (result.getStatus() == Inventory.ReservationStatus.RELEASED)
-                inventoryProducer.sendInventoryReleased(result);
-            else
-                inventoryProducer.sendInventoryReserved(result);
+            if (result.getStatus() == Inventory.ReservationStatus.RELEASED) {
+                log.info("Inventory released successfully: {}", order.getOrderId());
+            }
 
             processedKeys.add(order.getIdempotencyKey());
             ack.acknowledge();
@@ -80,4 +78,3 @@ public class InventoryConsumer {
         }
     }
 }
-

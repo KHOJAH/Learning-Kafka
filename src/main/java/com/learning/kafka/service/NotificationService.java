@@ -2,6 +2,7 @@ package com.learning.kafka.service;
 
 import com.learning.kafka.model.Notification;
 import com.learning.kafka.model.Order;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
@@ -10,6 +11,7 @@ import java.util.UUID;
 
 @Slf4j
 @Service
+@RequiredArgsConstructor
 public class NotificationService {
 
     public Notification sendOrderConfirmation(Order order) {

@@ -1,6 +1,7 @@
 package com.learning.kafka.producer;
 
 import com.learning.kafka.model.Notification;
+import com.learning.kafka.service.NotificationEventPublisher;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.kafka.core.KafkaTemplate;
@@ -12,7 +13,7 @@ import java.util.function.BiConsumer;
 @Slf4j
 @Component
 @RequiredArgsConstructor
-public class NotificationProducer {
+public class NotificationProducer implements NotificationEventPublisher {
 
     private final KafkaTemplate<String, Object> kafkaTemplate;
 
@@ -21,26 +22,42 @@ public class NotificationProducer {
 
     public void sendEmailNotification(Notification notification) {
         log.info("Sending email notification: {}", notification.getNotificationId());
-        kafkaTemplate.send(NOTIFICATION_EMAIL_TOPIC, notification.getOrderId(), notification)
-                .whenComplete(handleSendResult(notification.getNotificationId(), notification.getType().name()));
+        sendMessage(NOTIFICATION_EMAIL_TOPIC, notification.getOrderId(), notification,
+            notification.getNotificationId(), notification.getType().name());
+    }
+
+    @Override
+    public void publishEmailNotification(Notification notification) {
+        sendEmailNotification(notification);
     }
 
     public void sendSmsNotification(Notification notification) {
         log.info("Sending SMS notification: {}", notification.getNotificationId());
-        kafkaTemplate.send(NOTIFICATION_SMS_TOPIC, notification.getOrderId(), notification)
-                .whenComplete(handleSendResult(notification.getNotificationId(), notification.getType().name()));
+        sendMessage(NOTIFICATION_SMS_TOPIC, notification.getOrderId(), notification,
+            notification.getNotificationId(), notification.getType().name());
     }
 
-    private BiConsumer<SendResult<String, Object>, Throwable> handleSendResult(String notificationId, String type) {
+    @Override
+    public void publishSmsNotification(Notification notification) {
+        sendSmsNotification(notification);
+    }
+
+    private void sendMessage(String topic, String key, Object payload, String notificationId, String type) {
+        kafkaTemplate.send(topic, key, payload)
+                .whenComplete(handleSendCompletion(notificationId, type, topic));
+    }
+
+    private BiConsumer<SendResult<String, Object>, Throwable> handleSendCompletion(String notificationId, String type, String topic) {
         return (result, ex) -> {
             if (ex == null) {
-                log.info("Event not ification sent - Partition: {}, Offset: {},notificationId: {},type: {}",
-                        notificationId,
-                        type,
+                log.info("Notification sent successfully - Topic: {}, Partition: {}, Offset: {}, NotificationId: {}, Type: {}",
+                        topic,
                         result.getRecordMetadata().partition(),
-                        result.getRecordMetadata().offset());
+                        result.getRecordMetadata().offset(),
+                        notificationId,
+                        type);
             } else {
-                log.error("Failed to send event notification: {}", ex.getMessage(), ex);
+                log.error("Failed to send notification: {}", ex.getMessage(), ex);
             }
         };
     }

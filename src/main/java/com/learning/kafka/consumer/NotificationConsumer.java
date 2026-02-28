@@ -17,70 +17,51 @@ public class NotificationConsumer {
 
     private final NotificationService notificationService;
 
-    @KafkaListener(topics = {"notification-email", "notification-sms"},
-            groupId = "notification-group")
-    public void listenNotification(Notification notification, @Header(KafkaHeaders.RECEIVED_TOPIC) String topic) {
-        log.info("Received notification request: {}", notification.getNotificationId());
-        log.info("Topic: {}", topic);
-
-        if ("notification-email".equals(topic))
-            listenEmailNotification(notification);
-        else if ("notification-sms".equals(topic))
-            listenSMSNotification(notification);
-    }
-
-    public void listenEmailNotification(Notification notification) {
+    @KafkaListener(topics = {"notification-email"},
+            groupId = "notification-email-group",
+            errorHandler = "notificationErrorHandler")
+    public void listenEmailNotification(Notification notification, @Header(KafkaHeaders.RECEIVED_TOPIC) String topic) {
         log.info("Received email notification request: {}", notification.getNotificationId());
+        log.info("Topic: {}", topic);
+        log.info("Recipient: {}", notification.getRecipient());
 
         try {
-            Notification result = notificationService.sendOrderConfirmation(
-                    Order.builder()
-                            .orderId(notification.getOrderId())
-                            .customerEmail(notification.getRecipient())
-                            .build()
-            );
+            Order order = Order.builder()
+                    .orderId(notification.getOrderId())
+                    .customerEmail(notification.getRecipient())
+                    .build();
+
+            Notification result = notificationService.sendOrderConfirmation(order);
 
             log.info("Email notification sent: {}", result.getNotificationId());
+            
         } catch (Exception e) {
             log.error("Failed to send email notification: {}", e.getMessage(), e);
             throw e;
         }
     }
 
-    public void listenSMSNotification(Notification notification) {
-        log.info("Received sms notification request: {}", notification.getNotificationId());
+    @KafkaListener(topics = {"notification-sms"},
+            groupId = "notification-sms-group",
+            errorHandler = "notificationErrorHandler")
+    public void listenSMSNotification(Notification notification, @Header(KafkaHeaders.RECEIVED_TOPIC) String topic) {
+        log.info("Received SMS notification request: {}", notification.getNotificationId());
+        log.info("Topic: {}", topic);
+        log.info("Recipient: {}", notification.getRecipient());
 
         try {
-            Notification result = notificationService.sendOrderConfirmationSms(
-                    Order.builder()
-                            .orderId(notification.getOrderId())
-                            .build(), notification.getRecipient()
-            );
+            Order order = Order.builder()
+                    .orderId(notification.getOrderId())
+                    .build();
 
-            log.info("sms notification sent: {}", result.getNotificationId());
+            Notification result = notificationService.sendOrderConfirmationSms(order, notification.getRecipient());
+
+            log.info("SMS notification sent: {}", result.getNotificationId());
+            
         } catch (Exception e) {
-            log.error("Failed to send sms notification: {}", e.getMessage(), e);
+            log.error("Failed to send SMS notification: {}", e.getMessage(), e);
             throw e;
         }
     }
-
-
-    /**
-     * CHALLENGE 4.11: Configure custom error handler for notifications
-     * TODO: Create a separate error handler bean for notifications
-     * TODO: Use longer retry delays (notifications are less time-critical)
-     * TODO: Reference it using errorHandler attribute in @KafkaListener
-     *
-     * 💡 Hint:
-     * @KafkaListener(
-     *     topics = "notification-email",
-     *     groupId = "notification-email-group",
-     *     errorHandler = "notificationErrorHandler"
-     * )
-     *
-     * 📝 SOLUTION: Create notificationErrorHandler bean in KafkaErrorHandlingConfig
-     */
-    // TODO: Add custom error handler (see challenge above)
-
 
 }

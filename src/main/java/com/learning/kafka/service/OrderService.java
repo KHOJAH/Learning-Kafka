@@ -1,8 +1,9 @@
 package com.learning.kafka.service;
 
 import com.learning.kafka.dto.OrderRequest;
+import com.learning.kafka.model.Inventory;
 import com.learning.kafka.model.Order;
-import com.learning.kafka.producer.OrderProducer;
+import com.learning.kafka.model.Payment;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -12,7 +13,9 @@ import org.springframework.stereotype.Service;
 @RequiredArgsConstructor
 public class OrderService {
 
-    private final OrderProducer orderProducer;
+    private final OrderEventPublisher orderEventPublisher;
+    private final PaymentService paymentService;
+    private final InventoryService inventoryService;
 
     public Order createOrder(OrderRequest request) {
         log.info("Creating order for customer: {}", request.getCustomerId());
@@ -25,23 +28,70 @@ public class OrderService {
                 request.getShippingAddress()
         );
 
-        orderProducer.sendOrderCreatedAsync(order);
+        orderEventPublisher.publishOrderCreated(order);
 
-        log.info("Order created successfully: {}", order.getOrderId());
+        log.info("Order created and event published: {}", order.getOrderId());
         return order;
+    }
+
+    public void processOrder(Order order) {
+        log.info("Processing order: {}", order.getOrderId());
+
+        try {
+            if (order.getTotalAmount().doubleValue() < 50) {
+                log.info("Order amount too low, cancelling: {}", order.getOrderId());
+                return;
+            }
+
+            Payment payment = paymentService.processPaymentAndPublish(order);
+
+            if (payment.getStatus() == Payment.PaymentStatus.COMPLETED) {
+                Inventory inventory = Inventory.create(
+                        order.getOrderId(),
+                        order.getCorrelationId(),
+                        order.getItems(),
+                        1,
+                        "WAREHOUSE-001"
+                );
+                inventoryService.reserveInventoryAndPublish(inventory);
+            }
+
+            log.info("Order processed successfully: {}", order.getOrderId());
+
+        } catch (Exception e) {
+            log.error("Order processing failed: {}", e.getMessage(), e);
+            throw e;
+        }
+    }
+
+    public void cancelOrder(Order order) {
+        log.info("Cancelling order: {}", order.getOrderId());
+
+        try {
+            Order cancelled = order.cancel();
+            orderEventPublisher.publishOrderCancelled(cancelled);
+
+            // Step 2: Release inventory (if needed)
+            // In a full implementation, this would check if inventory was reserved
+            // and call inventoryService.releaseInventoryAndPublish(order)
+
+            // Step 3: Refund payment (if needed)
+            // In a full implementation, this would check if payment was processed
+            // and call paymentService.refundPaymentAndPublish(order)
+
+            log.info("Order cancelled successfully: {}", order.getOrderId());
+
+        } catch (Exception e) {
+            log.error("Order cancellation failed: {}", e.getMessage(), e);
+            throw e;
+        }
     }
 
     public Order confirmOrder(Order order) {
         log.info("Confirming order: {}", order.getOrderId());
-        orderProducer.sendOrderConfirmed(order.confirm());
-        log.info("Order confirmed successfully: {}", order.getOrderId());
-        return order;
-    }
-
-    public Order cancelOrder(Order order) {
-        log.info("Canceling order: {}", order.getOrderId());
-        orderProducer.sendOrderCancelled(order.cancel());
-        log.info("Order cancelled successfully: {}", order.getOrderId());
-        return order;
+        Order confirmed = order.confirm();
+        orderEventPublisher.publishOrderConfirmed(confirmed);
+        log.info("Order confirmed: {}", order.getOrderId());
+        return confirmed;
     }
 }

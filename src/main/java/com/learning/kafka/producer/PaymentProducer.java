@@ -2,6 +2,7 @@ package com.learning.kafka.producer;
 
 import com.learning.kafka.model.Order;
 import com.learning.kafka.model.Payment;
+import com.learning.kafka.service.PaymentEventPublisher;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.kafka.core.KafkaTemplate;
@@ -13,7 +14,7 @@ import java.util.function.BiConsumer;
 @Slf4j
 @Component
 @RequiredArgsConstructor
-public class PaymentProducer {
+public class PaymentProducer implements PaymentEventPublisher {
     private final KafkaTemplate<String, Object> kafkaTemplate;
 
     private static final String PAYMENT_PROCESSED_TOPIC = "payment-processed";
@@ -25,9 +26,19 @@ public class PaymentProducer {
         sendMessage(PAYMENT_PROCESSED_TOPIC, payment.getOrderId(), payment, payment.getPaymentId());
     }
 
+    @Override
+    public void publishPaymentProcessed(Payment payment) {
+        sendPaymentProcessed(payment);
+    }
+
     public void sendPaymentFailed(Payment payment) {
         log.info("Sending payment failed event: {}", payment.getPaymentId());
         sendMessage(PAYMENT_FAILED_TOPIC, payment.getOrderId(), payment, payment.getPaymentId());
+    }
+
+    @Override
+    public void publishPaymentFailed(Payment payment) {
+        sendPaymentFailed(payment);
     }
 
     public void sendPaymentProcessedTransactional(Payment payment, Order confirmedOrder) {
