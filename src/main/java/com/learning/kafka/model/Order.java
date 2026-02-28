@@ -1,6 +1,8 @@
 package com.learning.kafka.model;
 
 import com.fasterxml.jackson.annotation.JsonFormat;
+import com.fasterxml.jackson.databind.annotation.JsonSerialize;
+import com.fasterxml.jackson.datatype.jsr310.ser.InstantSerializer;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -22,9 +24,11 @@ public class Order {
     private OrderStatus status;
     private String items;
     private String shippingAddress;
-    @JsonFormat(shape = JsonFormat.Shape.STRING, pattern = "yyyy-MM-dd HH:mm:ss")
+    @JsonSerialize(using = InstantSerializer.class)
+    @JsonFormat(shape = JsonFormat.Shape.STRING, pattern = "yyyy-MM-dd'T'HH:mm:ss.SSS'Z'", timezone = "UTC")
     private Instant createdAt;
-    @JsonFormat(shape = JsonFormat.Shape.STRING, pattern = "yyyy-MM-dd HH:mm:ss")
+    @JsonSerialize(using = InstantSerializer.class)
+    @JsonFormat(shape = JsonFormat.Shape.STRING, pattern = "yyyy-MM-dd'T'HH:mm:ss.SSS'Z'", timezone = "UTC")
     private Instant updatedAt;
     private String correlationId;
     private String idempotencyKey;
@@ -59,8 +63,8 @@ public class Order {
                 .build();
     }
 
-    public void confirm() {
-        Order.builder()
+    public Order confirm() {
+        return Order.builder()
                 .orderId(this.orderId)
                 .customerId(this.customerId)
                 .customerEmail(this.customerEmail)

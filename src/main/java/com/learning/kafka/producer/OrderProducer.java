@@ -3,13 +3,14 @@ package com.learning.kafka.producer;
 import com.learning.kafka.model.Order;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.kafka.clients.producer.ProducerRecord;
+import org.apache.kafka.common.header.Headers;
+import org.apache.kafka.common.header.internals.RecordHeaders;
 import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.kafka.support.SendResult;
-import org.springframework.messaging.MessageHeaders;
-import org.springframework.messaging.support.GenericMessage;
 import org.springframework.stereotype.Component;
 
-import java.util.Map;
+import java.nio.charset.StandardCharsets;
 import java.util.concurrent.CompletableFuture;
 
 @Slf4j
@@ -39,19 +40,22 @@ public class OrderProducer {
         processOrder("Sending order cancelled event: {}", order, ORDER_CANCELLED_TOPIC, "Order cancelled event sent successfully - Topic: {}, Partition: {}, Offset: {}");
     }
 
-    private void processOrder(String s, Order order, String orderCancelledTopic, String s1) {
-        MessageHeaders headers = new MessageHeaders(Map.of("correlationId", order.getCorrelationId()));
-        GenericMessage<Order> orderMessage = new GenericMessage<>(order, headers);
-        log.info(s, order.getOrderId());
-        CompletableFuture<SendResult<String, Object>> future = kafkaTemplate.send(orderCancelledTopic, order.getOrderId(), orderMessage);
+    private void processOrder(String logMessage, Order order, String topic, String successMessage) {
+        Headers headers = new RecordHeaders()
+                .add("correlationId", order.getCorrelationId().getBytes(StandardCharsets.UTF_8));
+
+        ProducerRecord<String, Object> producerRecord = new ProducerRecord<>(topic, null, order.getOrderId(), order, headers);
+
+        log.info(logMessage, order.getOrderId());
+        CompletableFuture<SendResult<String, Object>> future = kafkaTemplate.send(producerRecord);
         future.whenComplete((result, ex) -> {
             if (ex == null) {
-                log.info(s1,
+                log.info(successMessage,
                         result.getRecordMetadata().topic(),
                         result.getRecordMetadata().partition(),
                         result.getRecordMetadata().offset());
             } else {
-                log.error("Failed to send order created event: {}", ex.getMessage(), ex);
+                log.error("Failed to send order event: {}", ex.getMessage(), ex);
             }
         });
     }

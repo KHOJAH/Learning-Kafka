@@ -33,16 +33,14 @@ public class OrderService {
 
     public Order confirmOrder(Order order) {
         log.info("Confirming order: {}", order.getOrderId());
-        order.confirm();
-        orderProducer.sendOrderConfirmed(order);
+        orderProducer.sendOrderConfirmed(order.confirm());
         log.info("Order confirmed successfully: {}", order.getOrderId());
         return order;
     }
 
     public Order cancelOrder(Order order) {
         log.info("Canceling order: {}", order.getOrderId());
-        order.cancel();
-        orderProducer.sendOrderCancelled(order);
+        orderProducer.sendOrderCancelled(order.cancel());
         log.info("Order cancelled successfully: {}", order.getOrderId());
         return order;
     }
