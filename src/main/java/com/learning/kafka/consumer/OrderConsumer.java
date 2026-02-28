@@ -1,6 +1,10 @@
 package com.learning.kafka.consumer;
 
+import com.learning.kafka.model.Inventory;
+import com.learning.kafka.model.Notification;
 import com.learning.kafka.model.Order;
+import com.learning.kafka.service.NotificationEventPublisher;
+import com.learning.kafka.service.NotificationService;
 import com.learning.kafka.service.OrderService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -17,6 +21,8 @@ import java.util.concurrent.ConcurrentHashMap;
 public class OrderConsumer {
 
     private final OrderService orderService;
+    private final NotificationService notificationService;
+    private final NotificationEventPublisher notificationEventPublisher;
     private final Set<String> processedKeys = ConcurrentHashMap.newKeySet();
 
     @KafkaListener(topics = "order-created", groupId = "order-processor-group", containerFactory = "kafkaListenerContainerFactory")
@@ -46,6 +52,40 @@ public class OrderConsumer {
     public void processOrderConfirmed(Order order) {
         log.info("Received order confirmed event: {}", order.getOrderId());
         log.info("Order confirmation will trigger notification: {}", order.getOrderId());
+    }
+
+    @KafkaListener(topics = "inventory-reserved", groupId = "order-confirmation-group", containerFactory = "kafkaListenerContainerFactory")
+    public void processInventoryReserved(Inventory inventory, Acknowledgment ack) {
+        log.info("Received inventory reserved event: {}", inventory.getReservationId());
+
+        if (processedKeys.contains(inventory.getReservationId())) {
+            log.warn("Duplicate message detected - skipping: {}", inventory.getReservationId());
+            ack.acknowledge();
+            return;
+        }
+
+        try {
+            // Build order from inventory data
+            Order order = Order.builder()
+                    .orderId(inventory.getOrderId())
+                    .correlationId(inventory.getCorrelationId())
+                    .build();
+
+            // Confirm the order
+            Order confirmedOrder = orderService.confirmOrder(order);
+
+            // Send notification
+            Notification notification = notificationService.sendOrderConfirmation(confirmedOrder);
+            notificationEventPublisher.publishEmailNotification(notification);
+
+            processedKeys.add(inventory.getReservationId());
+            ack.acknowledge();
+            log.info("Order confirmed and notification sent: {}", order.getOrderId());
+
+        } catch (Exception e) {
+            log.error("Order confirmation failed: {}", e.getMessage(), e);
+            throw e;
+        }
     }
 
     @KafkaListener(topics = "order-cancelled", groupId = "order-cancellation-group", containerFactory = "kafkaListenerContainerFactory")

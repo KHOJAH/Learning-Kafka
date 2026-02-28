@@ -2,7 +2,6 @@ package com.learning.kafka.service;
 
 import com.learning.kafka.exception.NonRetryableException;
 import com.learning.kafka.model.Inventory;
-import com.learning.kafka.model.Notification;
 import com.learning.kafka.model.Order;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -18,10 +17,6 @@ import java.util.concurrent.ConcurrentHashMap;
 public class InventoryService {
 
     private final InventoryEventPublisher inventoryEventPublisher;
-    private final OrderEventPublisher orderEventPublisher;
-    private final NotificationEventPublisher notificationEventPublisher;
-    private final NotificationService notificationService;
-    private final OrderService orderService;
     private final Random random = new Random();
     private final Set<String> processedReservations = ConcurrentHashMap.newKeySet();
 
@@ -29,22 +24,22 @@ public class InventoryService {
         Inventory result = reserveInventory(inventory);
 
         if (result.getStatus() == Inventory.ReservationStatus.RESERVED) {
-            log.info("Inventory reserved successfully, confirming order: {}", result.getOrderId());
-
-            inventoryEventPublisher.publishInventoryReserved(result);
-
-            Order order = Order.builder()
-                    .orderId(result.getOrderId())
-                    .correlationId(result.getCorrelationId())
-                    .build();
-            Order confirmedOrder = orderService.confirmOrder(order);
-
-            Notification notification = notificationService.sendOrderConfirmation(confirmedOrder);
-            notificationEventPublisher.publishEmailNotification(notification);
+            log.info("Inventory reserved successfully: {}", result.getOrderId());
+            publishInventoryReserved(result);
         } else {
-            log.warn("Inventory reservation failed, releasing: {}", result.getOrderId());
-            inventoryEventPublisher.publishInventoryReleased(result);
+            log.warn("Inventory reservation failed: {}", result.getOrderId());
+            publishInventoryReleased(result);
         }
+    }
+
+    public void publishInventoryReserved(Inventory inventory) {
+        log.info("Publishing inventory reserved event: {}", inventory.getReservationId());
+        inventoryEventPublisher.publishInventoryReserved(inventory);
+    }
+
+    public void publishInventoryReleased(Inventory inventory) {
+        log.info("Publishing inventory released event: {}", inventory.getReservationId());
+        inventoryEventPublisher.publishInventoryReleased(inventory);
     }
 
     public Inventory reserveInventory(Inventory inventory) {

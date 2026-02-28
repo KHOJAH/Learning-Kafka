@@ -23,6 +23,7 @@ public class OrderProducer implements OrderEventPublisher {
     private static final String ORDER_CREATED_TOPIC = "order-created";
     private static final String ORDER_CONFIRMED_TOPIC = "order-confirmed";
     private static final String ORDER_CANCELLED_TOPIC = "order-cancelled";
+    private static final String INVENTORY_RESERVATION_TOPIC = "inventory-reservation";
 
     @Override
     public void publishOrderCreated(Order order) {
@@ -37,6 +38,12 @@ public class OrderProducer implements OrderEventPublisher {
     @Override
     public void publishOrderCancelled(Order order) {
         sendOrderCancelled(order);
+    }
+
+    @Override
+    public void publishInventoryReservationRequest(Order order) {
+        log.info("Sending inventory reservation request: {}", order.getOrderId());
+        sendMessage(INVENTORY_RESERVATION_TOPIC, order.getOrderId(), order, order.getCorrelationId());
     }
 
     public void sendOrderCreated(Order order) {

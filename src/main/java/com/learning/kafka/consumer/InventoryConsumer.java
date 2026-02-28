@@ -12,6 +12,8 @@ import org.springframework.stereotype.Component;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 
+import static com.learning.kafka.model.Inventory.ReservationStatus.RESERVED;
+
 @Slf4j
 @Component
 @RequiredArgsConstructor
@@ -40,7 +42,13 @@ public class InventoryConsumer {
                     "WAREHOUSE-001"
             );
 
-            inventoryService.reserveInventoryAndPublish(inventory);
+            Inventory result = inventoryService.reserveInventory(inventory);
+
+            if (RESERVED.equals(result.getStatus())) {
+                inventoryService.publishInventoryReserved(result);
+            } else {
+                inventoryService.publishInventoryReleased(result);
+            }
 
             processedKeys.add(order.getIdempotencyKey());
             ack.acknowledge();

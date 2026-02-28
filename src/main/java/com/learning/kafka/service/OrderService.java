@@ -1,12 +1,13 @@
 package com.learning.kafka.service;
 
 import com.learning.kafka.dto.OrderRequest;
-import com.learning.kafka.model.Inventory;
 import com.learning.kafka.model.Order;
 import com.learning.kafka.model.Payment;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
+
+import static com.learning.kafka.model.Payment.PaymentStatus.COMPLETED;
 
 @Slf4j
 @Service
@@ -15,7 +16,6 @@ public class OrderService {
 
     private final OrderEventPublisher orderEventPublisher;
     private final PaymentService paymentService;
-    private final InventoryService inventoryService;
 
     public Order createOrder(OrderRequest request) {
         log.info("Creating order for customer: {}", request.getCustomerId());
@@ -45,15 +45,9 @@ public class OrderService {
 
             Payment payment = paymentService.processPaymentAndPublish(order);
 
-            if (payment.getStatus() == Payment.PaymentStatus.COMPLETED) {
-                Inventory inventory = Inventory.create(
-                        order.getOrderId(),
-                        order.getCorrelationId(),
-                        order.getItems(),
-                        1,
-                        "WAREHOUSE-001"
-                );
-                inventoryService.reserveInventoryAndPublish(inventory);
+            if (COMPLETED.equals(payment.getStatus())) {
+                // Publish event to trigger inventory reservation via Kafka
+                orderEventPublisher.publishInventoryReservationRequest(order);
             }
 
             log.info("Order processed successfully: {}", order.getOrderId());

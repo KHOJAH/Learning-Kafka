@@ -9,8 +9,8 @@ import org.springframework.stereotype.Service;
 
 import java.util.Random;
 
+import static com.learning.kafka.model.Payment.PaymentStatus.COMPLETED;
 import static com.learning.kafka.model.Payment.PaymentStatus.FAILED;
-import static com.learning.kafka.model.Payment.PaymentStatus.PROCESSING;
 
 @Slf4j
 @Service
@@ -22,7 +22,8 @@ public class PaymentService {
 
     public Payment processPaymentAndPublish(Order order) {
         Payment payment = processPayment(order);
-        if (PROCESSING.equals(payment.getStatus()))
+
+        if (COMPLETED.equals(payment.getStatus()))
             paymentEventPublisher.publishPaymentProcessed(payment);
         else if (FAILED.equals(payment.getStatus()))
             paymentEventPublisher.publishPaymentFailed(payment);

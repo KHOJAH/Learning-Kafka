@@ -25,15 +25,16 @@ public class NotificationConsumer {
         log.info("Topic: {}", topic);
         log.info("Recipient: {}", notification.getRecipient());
 
+        Order order = Order.builder()
+                .orderId(notification.getOrderId())
+                .customerEmail(notification.getRecipient())
+                .build();
+
         try {
-            Order order = Order.builder()
-                    .orderId(notification.getOrderId())
-                    .customerEmail(notification.getRecipient())
-                    .build();
 
-            Notification result = notificationService.sendOrderConfirmation(order);
+            //do action whatever u like
 
-            log.info("Email notification sent: {}", result.getNotificationId());
+            log.info("Email notification sent: {}", notification.getNotificationId());
             
         } catch (Exception e) {
             log.error("Failed to send email notification: {}", e.getMessage(), e);
@@ -49,14 +50,14 @@ public class NotificationConsumer {
         log.info("Topic: {}", topic);
         log.info("Recipient: {}", notification.getRecipient());
 
+        Order order = Order.builder()
+                .orderId(notification.getOrderId())
+                .build();
         try {
-            Order order = Order.builder()
-                    .orderId(notification.getOrderId())
-                    .build();
 
-            Notification result = notificationService.sendOrderConfirmationSms(order, notification.getRecipient());
+            //do action whatever u like
 
-            log.info("SMS notification sent: {}", result.getNotificationId());
+            log.info("SMS notification sent: {}", notification.getNotificationId());
             
         } catch (Exception e) {
             log.error("Failed to send SMS notification: {}", e.getMessage(), e);
