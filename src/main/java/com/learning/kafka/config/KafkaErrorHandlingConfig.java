@@ -1,5 +1,8 @@
 package com.learning.kafka.config;
 
+import com.fasterxml.jackson.databind.JsonMappingException;
+import com.learning.kafka.exception.NonRetryableException;
+import com.learning.kafka.exception.RetryableException;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.kafka.core.KafkaOperations;
@@ -8,18 +11,16 @@ import org.springframework.kafka.listener.DefaultErrorHandler;
 import org.springframework.util.backoff.ExponentialBackOff;
 import org.springframework.util.backoff.FixedBackOff;
 
+import java.net.ConnectException;
+import java.sql.SQLTransientConnectionException;
+import java.util.concurrent.TimeoutException;
+
 /**
- * Kafka Error Handling Configuration
- *
- * Configures error handling with retry mechanisms and Dead Letter Topics (DLT).
- *
  * Key Concepts:
  * - DefaultErrorHandler: Handles exceptions during message processing
  * - DeadLetterPublishingRecoverer: Sends failed messages to DLT
  * - FixedBackOff: Waits between retry attempts
  * - Retry vs Non-Retry exceptions: Classify which errors should be retried
- *
- * @author Kafka Mastery Project
  */
 @Configuration
 public class KafkaErrorHandlingConfig {
@@ -41,16 +42,16 @@ public class KafkaErrorHandlingConfig {
         DefaultErrorHandler errorHandler = new DefaultErrorHandler(recoverer, backOff);
         
         errorHandler.addRetryableExceptions(
-            java.net.ConnectException.class,
-            java.sql.SQLTransientConnectionException.class,
-            java.util.concurrent.TimeoutException.class
+            ConnectException.class,
+            SQLTransientConnectionException.class,
+            TimeoutException.class
         );
         
         errorHandler.addNotRetryableExceptions(
-            com.learning.kafka.exception.NonRetryableException.class,
-            com.fasterxml.jackson.databind.JsonMappingException.class,
-            java.lang.IllegalArgumentException.class,
-            com.learning.kafka.exception.RetryableException.class
+            NonRetryableException.class,
+            JsonMappingException.class,
+            IllegalArgumentException.class,
+            RetryableException.class
         );
 
         return errorHandler;
@@ -78,14 +79,14 @@ public class KafkaErrorHandlingConfig {
         
         DefaultErrorHandler errorHandler = new DefaultErrorHandler(recoverer, backOff);
         errorHandler.addRetryableExceptions(
-            java.net.ConnectException.class,
-            java.sql.SQLTransientConnectionException.class,
-            java.util.concurrent.TimeoutException.class
+            ConnectException.class,
+            SQLTransientConnectionException.class,
+            TimeoutException.class
         );
         errorHandler.addNotRetryableExceptions(
-            com.learning.kafka.exception.NonRetryableException.class,
-            com.fasterxml.jackson.databind.JsonMappingException.class,
-            java.lang.IllegalArgumentException.class
+            NonRetryableException.class,
+            JsonMappingException.class,
+            IllegalArgumentException.class
         );
         
         return errorHandler;
@@ -111,13 +112,13 @@ public class KafkaErrorHandlingConfig {
         
         DefaultErrorHandler errorHandler = new DefaultErrorHandler(recoverer, backOff);
         errorHandler.addRetryableExceptions(
-            java.net.ConnectException.class,
-            java.util.concurrent.TimeoutException.class
+            ConnectException.class,
+            TimeoutException.class
         );
         errorHandler.addNotRetryableExceptions(
-            com.learning.kafka.exception.NonRetryableException.class,
-            com.fasterxml.jackson.databind.JsonMappingException.class,
-            java.lang.IllegalArgumentException.class
+            NonRetryableException.class,
+            JsonMappingException.class,
+            IllegalArgumentException.class
         );
         
         return errorHandler;

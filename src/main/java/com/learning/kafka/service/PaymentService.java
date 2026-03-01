@@ -1,6 +1,7 @@
 package com.learning.kafka.service;
 
 import com.learning.kafka.exception.NonRetryableException;
+import com.learning.kafka.exception.RetryableException;
 import com.learning.kafka.model.Order;
 import com.learning.kafka.model.Payment;
 import lombok.RequiredArgsConstructor;
@@ -46,9 +47,7 @@ public class PaymentService {
             return payment.complete();
         } else if (outcome < 90) {
             log.warn("Temporary payment failure - will retry: {}", payment.getPaymentId());
-            return handlePaymentFailure(order, "Payment gateway temporarily unavailable");
-            // We Can use the RetryableException or make it failed
-//            throw new RetryableException("Payment gateway temporarily unavailable");
+            throw new RetryableException("Payment gateway temporarily unavailable");
         } else {
             log.error("Permanent payment failure: {}", payment.getPaymentId());
             throw new NonRetryableException("Invalid payment method");
