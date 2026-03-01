@@ -21,7 +21,7 @@ public class PaymentService {
     private final PaymentEventPublisher paymentEventPublisher;
     private final Random random = new Random();
 
-    public Payment processPayment(Order order) {
+    public void processPayment(Order order) {
         log.info("Processing payment for order: {}", order.getOrderId());
 
         Payment payment = Payment.create(
@@ -42,8 +42,6 @@ public class PaymentService {
                 paymentEventPublisher.publishPaymentFailed(result);
             }
 
-            return result;
-
         } catch (RetryableException e) {
             log.warn("Temporary payment failure - will retry: {}", order.getOrderId());
             throw e;
@@ -51,7 +49,6 @@ public class PaymentService {
             log.error("Permanent payment failure: {}", order.getOrderId());
             Payment failed = payment.fail(e.getMessage());
             paymentEventPublisher.publishPaymentFailed(failed);
-            return failed;
         }
     }
 

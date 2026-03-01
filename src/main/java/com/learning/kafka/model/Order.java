@@ -59,7 +59,7 @@ public class Order {
                 .createdAt(Instant.now())
                 .updatedAt(Instant.now())
                 .correlationId(UUID.randomUUID().toString())
-                .idempotencyKey("ORDER_" + orderId + "_" + Instant.now().toEpochMilli())
+                .idempotencyKey("ORDER_" + orderId)
                 .build();
     }
 

@@ -102,6 +102,7 @@ public class PaymentConsumer {
                 .orderId(payment.getOrderId())
                 .correlationId(payment.getCorrelationId())
                 .totalAmount(payment.getAmount())
+                .idempotencyKey("ORDER_" + payment.getOrderId())
                 .build();
     }
 

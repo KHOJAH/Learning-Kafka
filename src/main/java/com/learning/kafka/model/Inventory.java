@@ -59,6 +59,7 @@ public class Inventory {
         Instant now = Instant.now();
 
         return Inventory.builder()
+                .reservationId(reservationId)
                 .orderId(orderId)
                 .correlationId(correlationId)
                 .sku(sku)
@@ -86,6 +87,7 @@ public class Inventory {
         Instant now = Instant.now();
 
         return Inventory.builder()
+                .reservationId(reservationId)
                 .orderId(orderId)
                 .correlationId(correlationId)
                 .sku(sku)
