@@ -1,5 +1,6 @@
 package com.learning.kafka.consumer;
 
+import com.learning.kafka.metrics.KafkaMetricsBinder;
 import com.learning.kafka.model.Order;
 import com.learning.kafka.model.Payment;
 import com.learning.kafka.service.OrderEventPublisher;
@@ -25,6 +26,7 @@ import static com.learning.kafka.model.Payment.PaymentStatus.COMPLETED;
 public class PaymentConsumer {
 
     private final OrderEventPublisher orderEventPublisher;
+    private final KafkaMetricsBinder metricsBinder;
     private final Set<String> processedKeys = ConcurrentHashMap.newKeySet();
 
     @KafkaListener(
@@ -78,6 +80,9 @@ public class PaymentConsumer {
 
             Order order = buildOrderFromPayment(payment);
             orderEventPublisher.publishOrderFailed(order);
+
+            // Record payment failure metric
+            metricsBinder.recordPaymentFailure();
 
             processedKeys.add(payment.getPaymentId());
             ack.acknowledge();

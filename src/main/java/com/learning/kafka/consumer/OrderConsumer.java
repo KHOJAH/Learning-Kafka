@@ -1,8 +1,10 @@
 package com.learning.kafka.consumer;
 
+import com.learning.kafka.metrics.KafkaMetricsBinder;
 import com.learning.kafka.model.Order;
 import com.learning.kafka.service.OrderService;
 import com.learning.kafka.service.PaymentService;
+import io.micrometer.core.instrument.Timer;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
@@ -21,6 +23,7 @@ public class OrderConsumer {
 
     private final OrderService orderService;
     private final PaymentService paymentService;
+    private final KafkaMetricsBinder metricsBinder;
     private final Set<String> processedKeys = ConcurrentHashMap.newKeySet();
 
     @KafkaListener(
@@ -31,8 +34,12 @@ public class OrderConsumer {
     public void processOrderCreated(Order order, Acknowledgment ack) {
         log.info("Received order created event: {}", order.getOrderId());
 
+        // Start processing timer
+        Timer.Sample timerSample = metricsBinder.startProcessingTimer();
+
         if (isDuplicate(order.getIdempotencyKey())) {
             log.warn("Duplicate message detected - skipping: {}", order.getIdempotencyKey());
+            metricsBinder.stopProcessingTimer(timerSample);
             ack.acknowledge();
             return;
         }
@@ -42,18 +49,24 @@ public class OrderConsumer {
 
             if (processingOrder.getStatus() == Order.OrderStatus.CANCELLED) {
                 processedKeys.add(order.getIdempotencyKey());
+                metricsBinder.stopProcessingTimer(timerSample);
                 ack.acknowledge();
                 return;
             }
 
             paymentService.processPayment(processingOrder);
 
+            // Record successful order processing
+            metricsBinder.incrementOrdersProcessed();
+
             processedKeys.add(order.getIdempotencyKey());
+            metricsBinder.stopProcessingTimer(timerSample);
             ack.acknowledge();
             log.info("Order processed and payment initiated: {}", order.getOrderId());
 
         } catch (Exception e) {
             log.error("Order processing failed: {}", e.getMessage(), e);
+            metricsBinder.stopProcessingTimer(timerSample);
             throw e;
         }
     }
