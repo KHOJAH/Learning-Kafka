@@ -1,7 +1,6 @@
 package com.learning.kafka.consumer;
 
 import com.learning.kafka.model.Inventory;
-import com.learning.kafka.model.Notification;
 import com.learning.kafka.model.Order;
 import com.learning.kafka.service.InventoryService;
 import com.learning.kafka.service.NotificationEventPublisher;
@@ -9,6 +8,7 @@ import com.learning.kafka.service.NotificationService;
 import com.learning.kafka.service.OrderService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.kafka.annotation.KafkaListener;
 import org.springframework.kafka.support.Acknowledgment;
 import org.springframework.stereotype.Component;
@@ -19,6 +19,7 @@ import java.util.concurrent.ConcurrentHashMap;
 @Slf4j
 @Component
 @RequiredArgsConstructor
+@ConditionalOnProperty(name = "kafka.consumer.mode", havingValue = "standard", matchIfMissing = true)
 public class InventoryConsumer {
 
     private final OrderService orderService;
@@ -73,9 +74,7 @@ public class InventoryConsumer {
 
             Order confirmedOrder = orderService.confirmOrder(order);
 
-            Notification notification = notificationService.sendOrderConfirmation(confirmedOrder);
-            notificationEventPublisher.publishEmailNotification(notification);
-
+            notificationService.sendOrderConfirmation(confirmedOrder);
             processedKeys.add(inventory.getReservationId());
             ack.acknowledge();
 

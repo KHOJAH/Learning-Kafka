@@ -3,6 +3,8 @@ package com.learning.kafka.service;
 import com.learning.kafka.exception.NonRetryableException;
 import com.learning.kafka.model.Inventory;
 import com.learning.kafka.model.Order;
+import com.learning.kafka.producer.InventoryProducer;
+import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -16,11 +18,12 @@ import java.util.concurrent.ConcurrentHashMap;
 @RequiredArgsConstructor
 public class InventoryService {
 
-    private final InventoryEventPublisher inventoryEventPublisher;
+    private final InventoryProducer inventoryProducer;
     private final Random random = new Random();
     private final Set<String> processedReservations = ConcurrentHashMap.newKeySet();
 
-    public Inventory reserveInventoryAndPublish(Order order) {
+    @Transactional
+    public void reserveInventoryAndPublish(Order order) {
         log.info("Reserving inventory for order: {}", order.getOrderId());
 
         Inventory inventory = Inventory.create(
@@ -35,13 +38,12 @@ public class InventoryService {
 
         if (result.getStatus() == Inventory.ReservationStatus.RESERVED) {
             log.info("Inventory reserved successfully: {}", result.getOrderId());
-            inventoryEventPublisher.publishInventoryReserved(result);
+            inventoryProducer.publishInventoryReserved(result);
         } else if (result.getStatus() == Inventory.ReservationStatus.FAILED) {
             log.warn("Inventory reservation failed: {}", result.getOrderId());
-            inventoryEventPublisher.publishInventoryReleased(result);
+            inventoryProducer.publishInventoryReleased(result);
         }
 
-        return result;
     }
 
     private Inventory processReservation(Inventory inventory) {
@@ -59,6 +61,7 @@ public class InventoryService {
         }
     }
 
+    @Transactional
     public Inventory releaseInventoryAndPublish(Order order) {
         log.info("Releasing inventory for order: {}", order.getOrderId());
 
@@ -75,7 +78,7 @@ public class InventoryService {
         Inventory result = inventory.release();
         log.info("Inventory released: {}", result.getReservationId());
 
-        inventoryEventPublisher.publishInventoryReleased(result);
+        inventoryProducer.publishInventoryReleased(result);
         return result;
     }
 

@@ -1,53 +1,34 @@
 package com.learning.kafka.producer;
 
 import com.learning.kafka.model.Notification;
+import com.learning.kafka.outbox.OutboxHelper;
 import com.learning.kafka.service.NotificationEventPublisher;
+import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.kafka.core.KafkaTemplate;
-import org.springframework.kafka.support.SendResult;
 import org.springframework.stereotype.Component;
-
-import java.util.function.BiConsumer;
 
 @Slf4j
 @Component
 @RequiredArgsConstructor
 public class NotificationProducer implements NotificationEventPublisher {
 
-    private final KafkaTemplate<String, Object> kafkaTemplate;
+    private final OutboxHelper outboxHelper;
 
     private static final String NOTIFICATION_EMAIL_TOPIC = "notification-email";
     private static final String NOTIFICATION_SMS_TOPIC = "notification-sms";
 
     @Override
+    @Transactional
     public void publishEmailNotification(Notification notification) {
-        log.info("Publishing email notification: {}", notification.getNotificationId());
-        sendMessage(NOTIFICATION_EMAIL_TOPIC, notification.getOrderId(), notification, notification.getNotificationId());
+        log.info("Saving email notification event to outbox: {}", notification.getNotificationId());
+        outboxHelper.saveOutboxEvent("NOTIFICATION_EMAIL", notification.getNotificationId(), notification, NOTIFICATION_EMAIL_TOPIC);
     }
 
     @Override
+    @Transactional
     public void publishSmsNotification(Notification notification) {
-        log.info("Publishing SMS notification: {}", notification.getNotificationId());
-        sendMessage(NOTIFICATION_SMS_TOPIC, notification.getOrderId(), notification, notification.getNotificationId());
-    }
-
-    private void sendMessage(String topic, String key, Object payload, String notificationId) {
-        kafkaTemplate.send(topic, key, payload)
-                .whenComplete(handleSendCompletion(notificationId, topic));
-    }
-
-    private BiConsumer<SendResult<String, Object>, Throwable> handleSendCompletion(String notificationId, String topic) {
-        return (result, ex) -> {
-            if (ex == null) {
-                log.info("Notification sent successfully - Topic: {}, Partition: {}, Offset: {}, NotificationId: {}",
-                        topic,
-                        result.getRecordMetadata().partition(),
-                        result.getRecordMetadata().offset(),
-                        notificationId);
-            } else {
-                log.error("Failed to send notification: {}", ex.getMessage(), ex);
-            }
-        };
+        log.info("Saving SMS notification event to outbox: {}", notification.getNotificationId());
+        outboxHelper.saveOutboxEvent("NOTIFICATION_SMS", notification.getNotificationId(), notification, NOTIFICATION_SMS_TOPIC);
     }
 }

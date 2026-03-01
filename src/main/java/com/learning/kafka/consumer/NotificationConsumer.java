@@ -3,6 +3,7 @@ package com.learning.kafka.consumer;
 import com.learning.kafka.model.Notification;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.kafka.annotation.KafkaListener;
 import org.springframework.kafka.support.Acknowledgment;
 import org.springframework.stereotype.Component;
@@ -13,6 +14,7 @@ import java.util.concurrent.ConcurrentHashMap;
 @Slf4j
 @Component
 @RequiredArgsConstructor
+@ConditionalOnProperty(name = "kafka.consumer.mode", havingValue = "standard", matchIfMissing = true)
 public class NotificationConsumer {
 
     private final Set<String> processedNotifications = ConcurrentHashMap.newKeySet();

@@ -5,6 +5,7 @@ import com.learning.kafka.model.Payment;
 import com.learning.kafka.service.OrderEventPublisher;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.kafka.annotation.DltHandler;
 import org.springframework.kafka.annotation.KafkaListener;
 import org.springframework.kafka.support.Acknowledgment;
@@ -20,6 +21,7 @@ import static com.learning.kafka.model.Payment.PaymentStatus.COMPLETED;
 @Slf4j
 @Component
 @RequiredArgsConstructor
+@ConditionalOnProperty(name = "kafka.consumer.mode", havingValue = "standard", matchIfMissing = true)
 public class PaymentConsumer {
 
     private final OrderEventPublisher orderEventPublisher;

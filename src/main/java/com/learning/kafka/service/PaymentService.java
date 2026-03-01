@@ -4,6 +4,8 @@ import com.learning.kafka.exception.NonRetryableException;
 import com.learning.kafka.exception.RetryableException;
 import com.learning.kafka.model.Order;
 import com.learning.kafka.model.Payment;
+import com.learning.kafka.producer.PaymentProducer;
+import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -18,10 +20,11 @@ import static com.learning.kafka.model.Payment.PaymentStatus.FAILED;
 @RequiredArgsConstructor
 public class PaymentService {
 
-    private final PaymentEventPublisher paymentEventPublisher;
+    private final PaymentProducer paymentProducer;
     private final Random random = new Random();
 
-    public void processPayment(Order order) {
+    @Transactional
+    public Payment processPayment(Order order) {
         log.info("Processing payment for order: {}", order.getOrderId());
 
         Payment payment = Payment.create(
@@ -36,19 +39,20 @@ public class PaymentService {
 
             if (COMPLETED.equals(result.getStatus())) {
                 log.info("Payment successful: {}", result.getPaymentId());
-                paymentEventPublisher.publishPaymentProcessed(result);
+                paymentProducer.publishPaymentProcessed(result);
             } else if (FAILED.equals(result.getStatus())) {
                 log.error("Payment failed: {}", result.getPaymentId());
-                paymentEventPublisher.publishPaymentFailed(result);
+                paymentProducer.publishPaymentFailed(result);
             }
-
+            return result;
         } catch (RetryableException e) {
             log.warn("Temporary payment failure - will retry: {}", order.getOrderId());
             throw e;
         } catch (NonRetryableException e) {
             log.error("Permanent payment failure: {}", order.getOrderId());
             Payment failed = payment.fail(e.getMessage());
-            paymentEventPublisher.publishPaymentFailed(failed);
+            paymentProducer.publishPaymentFailed(failed);
+            return failed;
         }
     }
 

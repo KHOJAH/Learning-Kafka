@@ -10,6 +10,8 @@ import org.springframework.kafka.config.ConcurrentKafkaListenerContainerFactory;
 import org.springframework.kafka.core.ConsumerFactory;
 import org.springframework.kafka.core.DefaultKafkaConsumerFactory;
 import org.springframework.kafka.listener.ContainerProperties;
+import org.springframework.kafka.support.converter.JsonMessageConverter;
+import org.springframework.kafka.support.converter.RecordMessageConverter;
 import org.springframework.kafka.support.serializer.JsonDeserializer;
 
 import java.util.HashMap;
@@ -30,11 +32,7 @@ public class KafkaConsumerConfig {
     @Value("${spring.kafka.consumer.enable-auto-commit:false}")
     private boolean enableAutoCommit;
 
-    private final ObjectMapper objectMapper;
 
-    public KafkaConsumerConfig(ObjectMapper objectMapper) {
-        this.objectMapper = objectMapper;
-    }
 
     @Bean
     public ConsumerFactory<String, Object> consumerFactory() {
@@ -44,26 +42,33 @@ public class KafkaConsumerConfig {
         configProps.put(ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG, bootstrapServers);
         configProps.put(ConsumerConfig.GROUP_ID_CONFIG, groupId);
         configProps.put(ConsumerConfig.KEY_DESERIALIZER_CLASS_CONFIG, StringDeserializer.class);
+        configProps.put(ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG, StringDeserializer.class);
 
         // Security - trust all packages (in production, be more specific)
         configProps.put(JsonDeserializer.TRUSTED_PACKAGES, "*");
 
-
         // Transaction support
         configProps.put(ConsumerConfig.ISOLATION_LEVEL_CONFIG, "read_committed");
 
-        JsonDeserializer<Object> serializer = new JsonDeserializer<>(this.objectMapper);
-        return new DefaultKafkaConsumerFactory<>(configProps, new StringDeserializer(), serializer);
+        return new DefaultKafkaConsumerFactory<>(configProps);
     }
 
     @Bean
-    public ConcurrentKafkaListenerContainerFactory<String, Object> kafkaListenerContainerFactory() {
+    public RecordMessageConverter messageConverter(ObjectMapper objectMapper) {
+        return new JsonMessageConverter(objectMapper);
+    }
+
+    @Bean
+    public ConcurrentKafkaListenerContainerFactory<String, Object> kafkaListenerContainerFactory(
+            ConsumerFactory<String, Object> consumerFactory,
+            RecordMessageConverter messageConverter) {
         ConcurrentKafkaListenerContainerFactory<String, Object> factory =
                 new ConcurrentKafkaListenerContainerFactory<>();
 
-        factory.setConsumerFactory(consumerFactory());
+        factory.setConsumerFactory(consumerFactory);
         factory.getContainerProperties().setAckMode(ContainerProperties.AckMode.MANUAL);
         factory.setConcurrency(3);
+        factory.setRecordMessageConverter(messageConverter);
 
         return factory;
     }
@@ -74,21 +79,23 @@ public class KafkaConsumerConfig {
         configProps.put(ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG, bootstrapServers);
         configProps.put(ConsumerConfig.GROUP_ID_CONFIG, groupId + "-high-throughput");
         configProps.put(ConsumerConfig.KEY_DESERIALIZER_CLASS_CONFIG, StringDeserializer.class);
+        configProps.put(ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG, StringDeserializer.class);
         configProps.put(ConsumerConfig.AUTO_OFFSET_RESET_CONFIG, autoOffsetReset);
         configProps.put(ConsumerConfig.ENABLE_AUTO_COMMIT_CONFIG, false);
         configProps.put(JsonDeserializer.TRUSTED_PACKAGES, "*");
 
-        JsonDeserializer<Object> objectJsonDeserializer = new JsonDeserializer<>(this.objectMapper);
-        return new DefaultKafkaConsumerFactory<>(configProps, new StringDeserializer(), objectJsonDeserializer);
+        return new DefaultKafkaConsumerFactory<>(configProps);
     }
 
     @Bean
-    public ConcurrentKafkaListenerContainerFactory<String, Object> highThroughputListenerFactory() {
+    public ConcurrentKafkaListenerContainerFactory<String, Object> highThroughputListenerFactory(
+            RecordMessageConverter messageConverter) {
         ConcurrentKafkaListenerContainerFactory<String, Object> factory =
                 new ConcurrentKafkaListenerContainerFactory<>();
         factory.setConsumerFactory(highThroughputConsumerFactory());
         factory.getContainerProperties().setAckMode(ContainerProperties.AckMode.MANUAL);
         factory.setConcurrency(6); // Higher concurrency
+        factory.setRecordMessageConverter(messageConverter);
         return factory;
     }
 }

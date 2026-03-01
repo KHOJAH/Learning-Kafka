@@ -10,6 +10,7 @@ import com.learning.kafka.service.InventoryService;
 import com.learning.kafka.service.PaymentService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.kafka.annotation.KafkaListener;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
@@ -26,6 +27,7 @@ import static com.learning.kafka.saga.SagaState.SagaStep.PAYMENT_PROCESSED;
 @Slf4j
 @Component
 @RequiredArgsConstructor
+@ConditionalOnProperty(name = "kafka.consumer.mode", havingValue = "saga")
 public class OrderSagaOrchestrator {
 
     private final PaymentService paymentService;

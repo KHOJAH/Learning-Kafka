@@ -24,6 +24,9 @@ public class KafkaTopicConfig {
     @Value("${kafka.topics.payment.failed:payment-failed}")
     private String paymentFailedTopic;
 
+    @Value("${kafka.topics.inventory.reservation:inventory-reservation}")
+    private String inventoryReservationTopic;
+
     @Value("${kafka.topics.inventory.reserved:inventory-reserved}")
     private String inventoryReservedTopic;
 
@@ -71,6 +74,14 @@ public class KafkaTopicConfig {
     @Bean
     public NewTopic paymentFailedTopic() {
         return TopicBuilder.name(paymentFailedTopic)
+                .partitions(3)
+                .replicas(1)
+                .build();
+    }
+
+    @Bean
+    public NewTopic inventoryReservationTopic() {
+        return TopicBuilder.name(inventoryReservationTopic)
                 .partitions(3)
                 .replicas(1)
                 .build();

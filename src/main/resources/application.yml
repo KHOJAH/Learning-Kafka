@@ -108,7 +108,8 @@ kafka:
       max-delay-ms: 10000 # Maximum delay between retries
     dlt:
       enabled: true # Dead Letter Topic: sends failed messages to a separate topic for manual review
-
+  consumer:
+    mode: standard
 # Logging Configuration
 logging:
   level:

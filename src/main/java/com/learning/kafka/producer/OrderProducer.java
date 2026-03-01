@@ -1,25 +1,19 @@
 package com.learning.kafka.producer;
 
 import com.learning.kafka.model.Order;
+import com.learning.kafka.outbox.OutboxHelper;
 import com.learning.kafka.service.OrderEventPublisher;
+import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.apache.kafka.clients.producer.ProducerRecord;
-import org.apache.kafka.common.header.Headers;
-import org.apache.kafka.common.header.internals.RecordHeaders;
-import org.springframework.kafka.core.KafkaTemplate;
-import org.springframework.kafka.support.SendResult;
 import org.springframework.stereotype.Component;
-
-import java.nio.charset.StandardCharsets;
-import java.util.concurrent.CompletableFuture;
 
 @Slf4j
 @Component
 @RequiredArgsConstructor
 public class OrderProducer implements OrderEventPublisher {
 
-    private final KafkaTemplate<String, Object> kafkaTemplate;
+    private final OutboxHelper outboxHelper;
 
     private static final String ORDER_CREATED_TOPIC = "order-created";
     private static final String ORDER_CONFIRMED_TOPIC = "order-confirmed";
@@ -28,52 +22,37 @@ public class OrderProducer implements OrderEventPublisher {
     private static final String INVENTORY_RESERVATION_TOPIC = "inventory-reservation";
 
     @Override
+    @Transactional
     public void publishOrderCreated(Order order) {
-        log.info("Publishing order created event: {}", order.getOrderId());
-        sendMessage(ORDER_CREATED_TOPIC, order.getOrderId(), order, order.getCorrelationId());
+        log.info("Saving order created event to outbox: {}", order.getOrderId());
+        outboxHelper.saveOutboxEvent("ORDER_CREATED", order.getOrderId(), order, ORDER_CREATED_TOPIC);
     }
 
     @Override
+    @Transactional
     public void publishOrderConfirmed(Order order) {
-        log.info("Publishing order confirmed event: {}", order.getOrderId());
-        sendMessage(ORDER_CONFIRMED_TOPIC, order.getOrderId(), order, order.getCorrelationId());
+        log.info("Saving order confirmed event to outbox: {}", order.getOrderId());
+        outboxHelper.saveOutboxEvent("ORDER_CONFIRMED", order.getOrderId(), order, ORDER_CONFIRMED_TOPIC);
     }
 
     @Override
+    @Transactional
     public void publishOrderCancelled(Order order) {
-        log.info("Publishing order cancelled event: {}", order.getOrderId());
-        sendMessage(ORDER_CANCELLED_TOPIC, order.getOrderId(), order, order.getCorrelationId());
+        log.info("Saving order cancelled event to outbox: {}", order.getOrderId());
+        outboxHelper.saveOutboxEvent("ORDER_CANCELLED", order.getOrderId(), order, ORDER_CANCELLED_TOPIC);
     }
 
     @Override
+    @Transactional
     public void publishOrderFailed(Order order) {
-        log.info("Publishing order failed event: {}", order.getOrderId());
-        sendMessage(ORDER_FAILED_TOPIC, order.getOrderId(), order, order.getCorrelationId());
+        log.info("Saving order failed event to outbox: {}", order.getOrderId());
+        outboxHelper.saveOutboxEvent("ORDER_FAILED", order.getOrderId(), order, ORDER_FAILED_TOPIC);
     }
 
     @Override
+    @Transactional
     public void publishInventoryReservationRequest(Order order) {
-        log.info("Publishing inventory reservation request: {}", order.getOrderId());
-        sendMessage(INVENTORY_RESERVATION_TOPIC, order.getOrderId(), order, order.getCorrelationId());
-    }
-
-    private void sendMessage(String topic, String key, Object payload, String correlationId) {
-        Headers headers = new RecordHeaders()
-                .add("correlationId", correlationId.getBytes(StandardCharsets.UTF_8));
-
-        ProducerRecord<String, Object> producerRecord = new ProducerRecord<>(topic, null, key, payload, headers);
-
-        CompletableFuture<SendResult<String, Object>> future = kafkaTemplate.send(producerRecord);
-        future.whenComplete((result, ex) -> {
-            if (ex == null) {
-                log.info("Order event sent successfully - Topic: {}, Partition: {}, Offset: {}, CorrelationId: {}",
-                        result.getRecordMetadata().topic(),
-                        result.getRecordMetadata().partition(),
-                        result.getRecordMetadata().offset(),
-                        correlationId);
-            } else {
-                log.error("Failed to send order event: {}", ex.getMessage(), ex);
-            }
-        });
+        log.info("Saving inventory reservation request to outbox: {}", order.getOrderId());
+        outboxHelper.saveOutboxEvent("INVENTORY_RESERVATION_REQUEST", order.getOrderId(), order, INVENTORY_RESERVATION_TOPIC);
     }
 }

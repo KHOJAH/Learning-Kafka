@@ -97,6 +97,57 @@ curl -X POST http://localhost:8080/api/orders \
 
 ---
 
+## Consumer Modes
+
+This project supports two different processing modes that you can switch between via configuration:
+
+### Mode 1: Standard Consumer Mode (Default)
+Uses independent consumers for each processing stage. Each consumer handles one step and publishes events for the next.
+
+**Active Components:**
+- `OrderConsumer` - Processes orders and initiates payments
+- `PaymentConsumer` - Confirms payments and requests inventory
+- `InventoryConsumer` - Reserves inventory and confirms orders
+- `NotificationConsumer` - Sends notifications
+
+**Flow:** Order → Payment → Inventory → Confirmation → Notification
+
+### Mode 2: Saga Orchestrator Mode
+Uses a central orchestrator that coordinates the entire transaction with compensation logic.
+
+**Active Components:**
+- `OrderSagaOrchestrator` - Central coordinator for payment and inventory
+- Automatic compensation (rollback) on failures
+- Timeout handling for incomplete transactions
+
+**Flow:** Order → [Saga: Payment → Inventory] → Confirmation
+
+### How to Switch Modes
+
+Edit `src/main/resources/application.yml`:
+
+```yaml
+# Consumer Mode Configuration
+# Set to 'saga' to enable OrderSagaOrchestrator (disables standard consumers)
+# Set to 'standard' to enable standard consumers (disables saga orchestrator)
+kafka:
+  consumer:
+    mode: standard  # Change to 'saga' to use saga orchestrator
+```
+
+**Or use command-line argument:**
+```bash
+# Run with standard consumers
+mvn spring-boot:run -Dspring-boot.run.arguments="--kafka.consumer.mode=standard"
+
+# Run with saga orchestrator
+mvn spring-boot:run -Dspring-boot.run.arguments="--kafka.consumer.mode=saga"
+```
+
+The startup logs will show which mode is active.
+
+---
+
 ## Learning Path (4 Weeks)
 
 | Week | Focus | Topics |
