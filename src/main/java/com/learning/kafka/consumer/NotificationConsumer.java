@@ -17,14 +17,6 @@ public class NotificationConsumer {
 
     private final Set<String> processedNotifications = ConcurrentHashMap.newKeySet();
 
-    /**
-     * Listens to notification-email events and sends email notifications.
-     * 
-     * Flow:
-     * - Receives notification from order-confirmed or other events
-     * - Sends email to customer
-     * - Acknowledges the message
-     */
     @KafkaListener(
             topics = "notification-email",
             groupId = "notification-email-group",
@@ -42,7 +34,6 @@ public class NotificationConsumer {
         }
 
         try {
-            // Simulate sending email
             Thread.sleep(100);
             
             log.info("Email notification sent successfully: {}", notification.getNotificationId());
@@ -60,14 +51,6 @@ public class NotificationConsumer {
         }
     }
 
-    /**
-     * Listens to notification-sms events and sends SMS notifications.
-     * 
-     * Flow:
-     * - Receives notification from order-confirmed or other events
-     * - Sends SMS to customer
-     * - Acknowledges the message
-     */
     @KafkaListener(
             topics = "notification-sms",
             groupId = "notification-sms-group",
@@ -85,7 +68,6 @@ public class NotificationConsumer {
         }
 
         try {
-            // Simulate sending SMS
             Thread.sleep(50);
             
             log.info("SMS notification sent successfully: {}", notification.getNotificationId());
