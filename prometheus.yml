@@ -1,0 +1,19 @@
+# Prometheus Configuration for Spring Boot Kafka Application
+# Prometheus will scrape metrics from the Spring Boot actuator endpoint
+global:
+  scrape_interval: 15s # How often to scrape targets
+  evaluation_interval: 15s # How often to evaluate rules
+  external_labels:
+    monitor: 'kafka-mastery-monitor'
+
+# Scrape configurations
+scrape_configs:
+  # Spring Boot Actuator Prometheus Endpoint
+  - job_name: 'spring-boot-actuator'
+    metrics_path: '/actuator/prometheus'
+    static_configs:
+      # Use host.docker.internal to reach the Spring Boot app running on the host machine
+      - targets: [ 'host.docker.internal:8082' ]
+    # Retry configuration
+    scrape_timeout: 10s
+    honor_labels: true

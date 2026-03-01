@@ -92,8 +92,56 @@ curl -X POST http://localhost:8080/api/orders \
 ```
 
 ### Access Tools
+- **Grafana**: http://localhost:3000 - Dashboards and metrics visualization (login: admin/admin)
 - **Kafka UI**: http://localhost:8090 - View topics, messages, and consumer groups
 - **Schema Registry**: http://localhost:8081 - Manage message schemas
+
+---
+
+## Monitoring with Grafana
+
+### Dashboard Access
+1. Open http://localhost:3000
+2. Login with credentials: `admin` / `admin`
+3. Navigate to **Dashboards → Kafka Monitoring → Kafka Mastery Project**
+
+### Pre-configured Dashboards
+The project includes an auto-provisioned dashboard showing:
+- **HTTP Request Metrics** - Total requests, P95 latency, request rate
+- **JVM Metrics** - Memory usage by heap/non-heap areas
+- **Kafka Consumer Metrics** - Records consumed, consumer lag by topic/partition
+
+### Key Metrics to Watch
+
+| Metric | Description | Query |
+|--------|-------------|-------|
+| HTTP Request Rate | Requests per second | `rate(http_server_requests_total[1m])` |
+| P95 Latency | 95th percentile response time | `histogram_quantile(0.95, rate(http_server_requests_duration_seconds_bucket[5m]))` |
+| JVM Memory Used | Current memory consumption | `sum(jvm_memory_used_bytes)` |
+| Kafka Consumer Lag | Messages behind latest | `spring_kafka_consumer_lag` |
+| Kafka Consumer Rate | Messages processed per second | `rate(spring_kafka_consumer_records_consumed_total[1m])` |
+
+### Adding Custom Panels
+1. Click **+** → **Add** → **Panel**
+2. Select **Prometheus** as data source
+3. Write your PromQL query
+4. Customize visualization type (graph, stat, gauge, etc.)
+
+### Useful PromQL Queries
+
+```promql
+# HTTP error rate (4xx and 5xx responses)
+sum(rate(http_server_requests_total{status=~"4..|5.."}[5m]))
+
+# Kafka consumer lag across all topics
+sum(spring_kafka_consumer_lag{application="kafka-mastery-project"})
+
+# JVM GC pause time
+rate(jvm_gc_pause_seconds_sum[5m])
+
+# Active threads
+jvm_threads_live_threads{application="kafka-mastery-project"}
+```
 
 ---
 

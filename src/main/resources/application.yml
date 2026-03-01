@@ -114,8 +114,8 @@ kafka:
 logging:
   level:
     root: INFO
-    com.learning.kafka: DEBUG
-    org.springframework.kafka: DEBUG
+    com.learning.kafka: INFO
+    org.springframework.kafka: INFO
     org.apache.kafka: WARN
   pattern:
     console: "%d{yyyy-MM-dd HH:mm:ss} [%thread] %-5level %logger{36} - %msg%n"
